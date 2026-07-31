@@ -72,8 +72,10 @@
             display: inline-block;
             text-align: left;
             white-space: pre;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.03em; /* a hair tighter for a crisper wordmark */
             min-height: 7.2em; /* reserves the art's height so nothing jumps on load */
+            /* barely-there lift for a touch of depth */
+            filter: drop-shadow(0 1px 2px rgba(26, 26, 26, 0.14));
         }
 
         .content {
@@ -145,14 +147,6 @@
             footer { flex-direction: column; gap: 10px; text-align: center; }
         }
 
-        /* Respect users who prefer reduced motion: show everything, skip the scramble */
-        @media (prefers-reduced-motion: reduce) {
-            .content {
-                opacity: 1;
-                transform: none;
-                transition: none;
-            }
-        }
     </style>
 </head>
 <body>
@@ -231,14 +225,7 @@
 
             const originalArray = asciiArt.split('');
 
-            // If the user prefers reduced motion, render the art immediately and stop.
-            const reduceMotion = window.matchMedia &&
-                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            if (reduceMotion) {
-                asciiContainer.textContent = asciiArt;
-                document.querySelector('.content')?.classList.add('revealed');
-                return;
-            }
+            // Animation runs for every visitor (reduce-motion preference intentionally ignored).
 
             // Build the initial scrambled frame (keep spaces and newlines intact).
             const charArray = originalArray.map(ch =>
