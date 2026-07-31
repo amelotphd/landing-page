@@ -7,11 +7,13 @@
     <style>
         html {
             background-color: #faf9ff;
+            overflow-x: hidden;
         }
 
         body {
             margin: 0;
             padding: 0;
+            overflow-x: hidden;
             background-color: #faf9ff;
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif;
             min-height: 100vh;
@@ -56,11 +58,12 @@
 
         .ascii-art {
             margin: 40px auto 40px;
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
             padding: 0 20px;
             box-sizing: border-box;
             text-align: center;
+            overflow: hidden; /* clip the wide art before it can cause page scroll */
         }
 
         .ascii-art pre {
@@ -73,7 +76,7 @@
             text-align: left;
             white-space: pre;
             letter-spacing: -0.03em; /* a hair tighter for a crisper wordmark */
-            min-height: 7.2em; /* reserves the art's height so nothing jumps on load */
+            transform-origin: top center; /* scale-to-fit scales around the center */
             /* barely-there lift for a touch of depth */
             filter: drop-shadow(0 1px 2px rgba(26, 26, 26, 0.14));
         }
@@ -142,7 +145,6 @@
 
         @media (max-width: 768px) {
             header { padding: 15px 20px; }
-            .ascii-art pre { font-size: 10px; }
             .tagline { font-size: 24px; }
             footer { flex-direction: column; gap: 10px; text-align: center; }
         }
@@ -232,6 +234,33 @@
                 (ch === '\n' || ch === ' ') ? ch : randChar()
             );
             asciiContainer.textContent = charArray.join('');
+
+            // Scale the wordmark down to fit narrow screens, keeping it centered.
+            // The art is ~102 chars wide, so on a phone it must shrink to fit.
+            const artWrap = asciiContainer.parentElement; // .ascii-art
+            function fitAscii() {
+                asciiContainer.style.transform = 'none';
+                artWrap.style.height = 'auto';
+                const natW = asciiContainer.offsetWidth;
+                const natH = asciiContainer.offsetHeight;
+                if (!natW) return;
+                const cs = getComputedStyle(artWrap);
+                const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+                const avail = artWrap.clientWidth - padX;
+                const scale = Math.min(1, avail / natW);
+                if (scale < 1) {
+                    asciiContainer.style.transform = 'scale(' + scale + ')';
+                    // collapse the leftover height left by the shrunk art
+                    artWrap.style.height = Math.ceil(natH * scale) + 'px';
+                }
+            }
+            fitAscii();
+            let resizeT;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeT);
+                resizeT = setTimeout(fitAscii, 100);
+            });
+            window.addEventListener('load', fitAscii);
 
             // Indices that still need to resolve to their real character.
             const unrevealed = [];
