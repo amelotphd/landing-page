@@ -62,7 +62,7 @@
             width: 100%;
             padding: 0 20px;
             box-sizing: border-box;
-            text-align: center;
+            text-align: left;
             overflow: hidden; /* clip the wide art before it can cause page scroll */
         }
 
@@ -71,12 +71,12 @@
             font-size: 14px;
             line-height: 1.2;
             color: #1a1a1a;
-            margin: 0 auto;
+            margin: 0;
             display: inline-block;
             text-align: left;
             white-space: pre;
             letter-spacing: -0.03em; /* a hair tighter for a crisper wordmark */
-            transform-origin: top center; /* scale-to-fit scales around the center */
+            transform-origin: top left; /* JS scales/centers from here */
             /* barely-there lift for a touch of depth */
             filter: drop-shadow(0 1px 2px rgba(26, 26, 26, 0.14));
         }
@@ -235,8 +235,11 @@
             );
             asciiContainer.textContent = charArray.join('');
 
-            // Scale the wordmark down to fit narrow screens, keeping it centered.
+            // Scale the wordmark to fit narrow screens AND center it explicitly.
             // The art is ~102 chars wide, so on a phone it must shrink to fit.
+            // We anchor the <pre> at top-left and compute the exact horizontal
+            // offset ourselves, rather than relying on the browser to center an
+            // element that's wider than the screen (which it won't do reliably).
             const artWrap = asciiContainer.parentElement; // .ascii-art
             function fitAscii() {
                 asciiContainer.style.transform = 'none';
@@ -245,16 +248,18 @@
                 const natH = asciiContainer.offsetHeight;
                 if (!natW) return;
                 const cs = getComputedStyle(artWrap);
-                const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-                const avail = artWrap.clientWidth - padX;
+                const padL = parseFloat(cs.paddingLeft) || 0;
+                const padR = parseFloat(cs.paddingRight) || 0;
+                const avail = artWrap.clientWidth - padL - padR;
                 const scale = Math.min(1, avail / natW);
-                if (scale < 1) {
-                    asciiContainer.style.transform = 'scale(' + scale + ')';
-                    // collapse the leftover height left by the shrunk art
-                    artWrap.style.height = Math.ceil(natH * scale) + 'px';
-                }
+                const scaledW = natW * scale;
+                const offsetX = Math.max(0, (avail - scaledW) / 2);
+                asciiContainer.style.transform =
+                    'translateX(' + offsetX + 'px) scale(' + scale + ')';
+                artWrap.style.height = Math.ceil(natH * scale) + 'px';
             }
             fitAscii();
+            requestAnimationFrame(fitAscii); // re-measure once layout settles
             let resizeT;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeT);
